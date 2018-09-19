@@ -1,0 +1,38 @@
+# A description of what this class does
+#
+# @summary Client configuration. Remember that this is from the
+# perspective of git, not Puppet Enterprise - meaning that this
+# class goes on the PE server, acting as a CLIENT of the git server.
+#
+# @example
+#   include pe_git::client
+class pe_git::client {
+  $dest_dir = '/etc/puppetlabs/puppetserver/ssh'
+  $dest_file = 'id-control_repo'
+  file { $dest_dir:
+    ensure => directory,
+    owner  => 'pe-puppet',
+    group  => 'pe-puppet',
+    mode   => '0755',
+  }
+  file { "${dest_dir}/${dest_file}":
+    ensure  => present,
+    owner   => 'pe-puppet',
+    group   => 'pe-puppet',
+    mode    => '0600',
+    require => File[$dest_dir],
+  }
+  file { "${dest_dir}/${dest_file}.pub":
+    ensure  => present,
+    owner   => 'pe-puppet',
+    group   => 'pe-puppet',
+    mode    => '0644',
+    require => File[$dest_dir],
+  }
+  @@ssh_authorized_key { "pe_git_key":
+    ensure => present,
+    type   => 'ssh-rsa',
+    key    => 'REPLACE_THIS',
+    user   => 'git',
+  }
+}

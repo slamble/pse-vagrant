@@ -1,5 +1,4 @@
-
-domain = 'psehomework.localdomain'
+#domain = 'psehomework.localdomain'
 
 nodes = [
   { :hostname => 'pe-master',        :ip => '10.0.42.240', :box => 'generic/centos7', :ram => 8192, :provision_pe => true },
@@ -17,14 +16,18 @@ Vagrant.configure("2") do |config|
       nodeconfig.vm.network :private_network, ip: node[:ip]
 
       if (node[:ram])
-        #nodeconfig.vm.provider "hyperv" do |hv|
-        #  hv.memory = node[:ram]
-        #  hv.maxmemory = node[:ram]
-        #end
+        nodeconfig.vm.provider "hyperv" do |hv|
+          hv.memory = node[:ram]
+          hv.maxmemory = node[:ram]
+        end
+        nodeconfig.vm.provider "virtualbox" do |v|
+          v.memory = node[:ram]
+        end
       end
       if (node[:provision_pe])
         nodeconfig.vm.provision "file", source:"puppet-enterprise-2018.1.3-el-7-x86_64.tar.gz", destination: "$HOME/pe.tgz"
         nodeconfig.vm.provision "file", source:"custom-pe.conf", destination: "$HOME/custom-pe.conf"
+        nodeconfig.vm.provision "file", source:"pe_git", destination: "$HOME/pe_git"
         nodeconfig.vm.provision :shell, path: "install-pe.sh"
         nodeconfig.vm.provision :shell, path: "pe-classification.py"
         nodeconfig.vm.provision :shell, inline: "/usr/local/bin/puppet agent -t || exit 0"
@@ -35,5 +38,16 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  
+  # yeah, this probably should be in the general list of hosts, but
+  # because I'm playing around with trusted facts (CSR attributes),
+  # I've split it out as a matter of convenience.
+  config.vm.define "git" do |git|
+    git.vm.box = "generic/centos7"
+    git.vm.hostname = "git"
+    git.vm.network :public_network
+    git.vm.network :private_network, ip: "10.0.42.244"
+    git.vm.provision :file, source:"git_csr_attributes.yaml", destination: "$HOME/csr_attributes.yaml"
+    git.vm.provision :file, source:"control-repo", destination: "$HOME/control-repo"
+    git.vm.provision :shell, path: "install-puppet-linux.sh"
+  end
 end
